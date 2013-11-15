@@ -248,9 +248,29 @@ int cloudfs_object_read_fp(const char *path, FILE *fp)
 {
   fflush(fp);
   rewind(fp);
+
+  curl_slist *headers = NULL;
+
+  char * fname = strrchr (path, '/');
+  if(fname)
+  {
+    fname += 1;
+    fname = curl_escape(fname, 0);
+    const char* contentHeaderStart = "attachment; filename=";
+    char* contentHeader = (char*)malloc (strlen(contentHeaderStart)+strlen(fname)+1);
+    strcpy(contentHeader, contentHeaderStart);
+    strcat(contentHeader, fname);
+
+    add_header(&headers, "Content-Disposition", contentHeader);
+    curl_free(fname);
+  }
+  
+
   char *encoded = curl_escape(path, 0);
-  int response = send_request("PUT", encoded, fp, NULL, NULL);
+  int response = send_request("PUT", encoded, fp, NULL, headers);
   curl_free(encoded);
+  if(headers)
+    curl_slist_free_all(headers);
   return (response >= 200 && response < 300);
 }
 
